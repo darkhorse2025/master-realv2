@@ -13,6 +13,7 @@ import { ToolsEducation } from "@/components/tools-education"
 import { TextInput } from "@/components/text-input"
 import { motion } from "framer-motion"
 import { useToolsFunctions } from "@/hooks/use-tools"
+import AudioVisualizer from '@/components/ui/audio-visualizer';
 
 const App: React.FC = () => {
   // State for voice selection
@@ -56,6 +57,7 @@ const App: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
+        <AudioVisualizer color="lime" />
         <Welcome />
         
         <motion.div 

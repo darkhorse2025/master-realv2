@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { Conversation } from "@/lib/conversations";
+import { Conversation, saveConversation } from "@/lib/conversations";
 import { useTranslations } from "@/components/translations-context";
 
 export interface Tool {
@@ -27,12 +27,14 @@ interface UseWebRTCAudioSessionReturn {
   currentVolume: number;
   conversation: Conversation[];
   sendTextMessage: (text: string) => void;
+  saveConversationToFirebase: (conversation: Conversation[]) => Promise<void>;
 }
 
 /**
  * Hook to manage a real-time session with OpenAI's Realtime endpoints.
  */
 export default function useWebRTCAudioSession(
+  
   voice: string,
   tools?: Tool[],
 ): UseWebRTCAudioSessionReturn {
@@ -56,7 +58,9 @@ export default function useWebRTCAudioSession(
 
   // Main conversation state
   const [conversation, setConversation] = useState<Conversation[]>([]);
+  const [fullConversation, setFullConversation] = useState<Conversation[]>([]); // State to hold full conversation
 
+  
   // For function calls (AI "tools")
   const functionRegistry = useRef<Record<string, Function>>({});
 
@@ -227,6 +231,9 @@ export default function useWebRTCAudioSession(
             status: "final",
           });
           clearEphemeralUserMessage();
+
+          // Save conversation to Firebase after final transcription
+          saveConversationToFirebase(conversation);
           break;
         }
 
@@ -553,7 +560,27 @@ export default function useWebRTCAudioSession(
     };
     
     dataChannelRef.current.send(JSON.stringify(message));
-    dataChannelRef.current.send(JSON.stringify(response));}
+    dataChannelRef.current.send(JSON.stringify(response));
+  }
+
+  /**
+   * Save the entire conversation history to Firebase
+   */
+  const saveConversationToFirebase = async (conversationHistory: Conversation[]) => {
+    if (conversationHistory && conversationHistory.length > 0) {
+      conversationHistory.forEach(async (conversationItem) => {
+        await saveConversation(conversationItem);
+      });
+      console.log("Full conversation saved to Firebase");
+    } else {
+      console.log("No conversation to save.");
+    }
+  };
+
+  // Update fullConversation whenever conversation state changes
+  useEffect(() => {
+    setFullConversation(conversation);
+  }, [conversation]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -573,5 +600,6 @@ export default function useWebRTCAudioSession(
     currentVolume,
     conversation,
     sendTextMessage,
+    saveConversationToFirebase, // Expose saveConversationToFirebase to be used if needed
   };
 }
